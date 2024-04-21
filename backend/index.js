@@ -8,9 +8,51 @@ const stripe=require("stripe")("sk_test_51NWaa1ELjlQVNZy6cUNpnJzKAInJFv9328LUdZk
 const path = require("path")
 const app = express();
 const mongoose = require('mongoose');
+const { PythonShell } = require('python-shell');
 
 app.use(express.json())
 app.use(cors())
+
+// Define a function to call the Python script
+function getRecommendedCities(inputCity,callback) {
+  let options = {
+    mode: 'text',
+    pythonPath: 'python', // Change this to your Python executable path if necessary
+    pythonOptions: ['-u'], // get print results in real-time
+    args: [inputCity]
+  };
+
+  PythonShell.run('recommend_cities.py', options).then( results =>{
+   
+    console.log(results)
+    console.log('python script finished')
+    callback(null, results)
+
+})  .catch(err => {
+  console.error('Error:', err);
+  callback(err);
+});
+}
+
+app.get("/", async (req, resp) => {
+  const inputCity = req.body.place;
+
+if (inputCity) {
+    getRecommendedCities(inputCity, function(err, results) {
+        if (err) {
+            console.error(err);
+            // resp.status(500).send("Internal Server Error");
+        } else {
+            resp.send(results);
+            console.log("machine learining results: " ,results)
+        }
+    });
+
+   
+} 
+
+});
+
 app.post("/add-package", async (req, resp) => {
   let package = new Package(req.body);
   let result = await package.save();
